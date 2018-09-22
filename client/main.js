@@ -33,39 +33,45 @@ var GameObject = function(id) {
 	this.x = 0
 	this.y = 0
 	this.direction = DIRECTION.STOP
-	this.speed = 100
+	this.speed = 200
 	this.move = function (dt) {
-		dt = dt / 1000
+		//dt = dt / 1000
 		var x = this.x
 		var y = this.y
+		var moveLen = Math.ceil(this.speed * dt / 1000);
 		switch(this.direction) {
 			case DIRECTION.UP:
 			{
-				y -= this.speed * dt
+				y -= moveLen
 				break
 			}
 			case DIRECTION.DOWN:
 			{
-				y += this.speed * dt
+				y += moveLen
 				break
 			}
 			case DIRECTION.LEFT:
 			{
-				x -= this.speed * dt
+				x -= moveLen
 				break
 			}
 			case DIRECTION.RIGHT:
 			{
-				x += this.speed * dt
+				x += moveLen
 				break
 			}
+			case DIRECTION.STOP:
+			{
+				return;
+			}
 		}
-		if(x <= (WIDTH - BOX_SIZE) && x >= 0) {
+
+		//if(x <= (WIDTH - BOX_SIZE) && x >= 0) {
 			this.x = x
-		}
-		if(y <= (HEIGHT - BOX_SIZE) && y >= 0) {
+		//}
+		//if(y <= (HEIGHT - BOX_SIZE) && y >= 0) {
 			this.y = y
-		}
+		//}
 	}
 }
 
@@ -185,7 +191,7 @@ $(function () {
 		var direction = inputDirection
 		socket.emit("message", {
 			direction: direction,
-			step:stepTime,
+			//step:stepTime,
 		})
 	}
 
@@ -260,36 +266,65 @@ $(function () {
 	})
 
 	// 键盘事件
+	var isKeyDown = false;
 	$('body').keydown(function(e) {
-		if(gameStatus != STATUS.START) return
+		if(isFastRunning){
+			return;
+		}
+		if(gameStatus != STATUS.START || isKeyDown){
+			return;
+		}
 		switch(e.keyCode) {
 			case 38: 
 			{
+				isKeyDown = true;
 				inputDirection = DIRECTION.UP 
 				break
 			}
 			case 40: 
 			{
+				isKeyDown = true;
 				inputDirection = DIRECTION.DOWN 
 				break
 			}
 			case 37: 
 			{
+				isKeyDown = true;
 				inputDirection = DIRECTION.LEFT 
 				break
 			}
 			case 39: 
 			{
+				isKeyDown = true;
 				inputDirection = DIRECTION.RIGHT 
 				break
 			}
-			case 13: 
+		}
+		if(isKeyDown){
+			sendCommand();
+		}
+	})
+
+	$('body').keyup(function(e) {
+		if(isFastRunning){
+			return;
+		}
+		var old = isKeyDown;
+		switch(e.keyCode){
+			case 38: 
+			case 40: 
+			case 37: 
+			case 39: 
 			{
-				inputDirection = DIRECTION.STOP 
-				break
+				isKeyDown = false;
 			}
 		}
-		sendCommand()
+
+		if(gameStatus == STATUS.START && old != isKeyDown){
+			inputDirection = DIRECTION.STOP
+			sendCommand()
+			return;
+		}
 	})
 
 	// 开始游戏
