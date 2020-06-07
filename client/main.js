@@ -233,7 +233,7 @@ $(function () {
 			var scale = Math.ceil(recvCommands.length / 3)
 			if(scale > 10) scale = 10
 			isFastRunning = (scale > 1)
-			dt *= dt
+			dt *= dt * scale
 			everFrameCost += dt
 			if(everFrameCost >= stepInterval) {
 				stepUpdate(everFrameCost)
