@@ -80,7 +80,7 @@ $(function () {
 	var context = document.getElementById("canvas").getContext("2d")
 	// 每个step的间隔ms，服务器返回
 	var stepInterval = 0
-	// 当前step时间戳
+	// 服务端当前运行到了多少帧
 	var stepTime = 0
 	// 输入方向
 	var inputDirection = null
@@ -156,7 +156,7 @@ $(function () {
 			var command = json[i]
 			recvCommands.push(command)
 			stepTime = command[command.length - 1].step
-			console.log("**** recv " + stepTime + " ****")
+			//console.log("**** recv " + stepTime + " ****")
 		}
 	})
 
@@ -196,48 +196,48 @@ $(function () {
 	}
 
 	// step定时器
-	function stepUpdate() {
+	function stepUpdate(dt) {
+		// 执行指令
+		if(recvCommands.length > 0) {
+			var ms = dt
+			if(runningCommands == null) {
+				runningCommands = recvCommands[0]
+				runningCommands.ms = stepInterval
+			}
+			if(runningCommands.ms < ms) {
+				ms = runningCommands.ms
+			}
+			for (var i = 0; i < runningCommands.length; i++) {
+				var command = runningCommands[i]
+				if(runningCommands.ms == stepInterval) console.log("xxxxxx", command)
+				var obj = gameObjects[command.id]
+				if(command.direction) {
+					obj.direction = command.direction
+				}
+				obj.move(ms)
+			}
+			runningCommands.ms = runningCommands.ms - ms
+			if(runningCommands.ms == 0) {
+				recvCommands.shift()
+				runningCommands = null
+			}
+		}
 	}
 
 	// frame定时器
-	var stepUpdateCounter = 0
+	var everFrameCost = 0 //每一逻辑帧已经消耗了多少时间
 	function update(dt) {
 		if(gameStatus == STATUS.START) {
 			// TODO: 逻辑/UI分离
-			stepUpdateCounter += dt
-			if(stepUpdateCounter >= stepInterval) {
-				stepUpdate()
-				stepUpdateCounter -= stepInterval
-			}
-
 			// 积攒的包过多时要加速运行
 			var scale = Math.ceil(recvCommands.length / 3)
 			if(scale > 10) scale = 10
 			isFastRunning = (scale > 1)
-			// 执行指令
-			if(recvCommands.length > 0) {
-				var ms = dt * scale
-				if(runningCommands == null) {
-					runningCommands = recvCommands[0]
-					runningCommands.ms = stepInterval
-				}
-				if(runningCommands.ms < ms) {
-					ms = runningCommands.ms
-				}
-				for (var i = 0; i < runningCommands.length; i++) {
-					var command = runningCommands[i]
-					if(runningCommands.ms == stepInterval) console.log(command)
-					var obj = gameObjects[command.id]
-					if(command.direction) {
-						obj.direction = command.direction
-					}
-					obj.move(ms)
-				}
-				runningCommands.ms = runningCommands.ms - ms
-				if(runningCommands.ms == 0) {
-					recvCommands.shift()
-					runningCommands = null
-				}
+			dt *= dt
+			everFrameCost += dt
+			if(everFrameCost >= stepInterval) {
+				stepUpdate(everFrameCost)
+				everFrameCost -= stepInterval
 			}
 
 			// 绘制
